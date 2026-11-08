@@ -20,20 +20,9 @@ public static class DbInitializer
 			DisplayName = "Campus Events Office"
 		};
 
-		var academic = new Category
-		{
-			Name = "Academic"
-		};
-
-		var social = new Category
-		{
-			Name = "Social"
-		};
-
-		var career = new Category
-		{
-			Name = "Career"
-		};
+		var academic = new Category { Name = "Academic" };
+		var social = new Category { Name = "Social" };
+		var career = new Category { Name = "Career" };
 
 		context.Users.Add(organizer);
 		context.Categories.AddRange(academic, social, career);
@@ -44,6 +33,7 @@ public static class DbInitializer
 
 		var libraryStart = DateTime.Today.AddDays(3).AddHours(18);
 		var careerStart = DateTime.Today.AddDays(5).AddHours(12);
+		var workshopStart = DateTime.Today.AddDays(6).AddHours(16);
 		var draftStart = DateTime.Today.AddDays(7).AddHours(15);
 		var cancelledStart = DateTime.Today.AddDays(9).AddHours(20);
 		var pastStart = DateTime.Today.AddDays(-10).AddHours(13);
@@ -74,6 +64,19 @@ public static class DbInitializer
 				Status = EventStatus.Published,
 				CreatedAt = createdAt,
 				CategoryId = career.Id,
+				OrganizerId = organizer.Id
+			},
+			new Event
+			{
+				Title = "Study Skills Workshop",
+				Description = "A practical session on planning, note-taking, and exam preparation.",
+				Location = "Learning Commons, Room 110",
+				StartDateTime = workshopStart,
+				EndDateTime = workshopStart.AddHours(1),
+				Capacity = 40,
+				Status = EventStatus.Published,
+				CreatedAt = createdAt,
+				CategoryId = academic.Id,
 				OrganizerId = organizer.Id
 			},
 			new Event
@@ -115,7 +118,6 @@ public static class DbInitializer
 				CategoryId = career.Id,
 				OrganizerId = organizer.Id
 			}
-
 		};
 
 		context.Events.AddRange(events);

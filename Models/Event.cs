@@ -1,13 +1,18 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace CampusEvents.Models;
 
 public class Event
 {
 	public int Id { get; set; }
 
+	[Required]
 	public string Title { get; set; } = string.Empty;
 
+	[Required]
 	public string Description { get; set; } = string.Empty;
 
+	[Required]
 	public string Location { get; set; } = string.Empty;
 
 	public DateTime StartDateTime { get; set; }
@@ -27,4 +32,6 @@ public class Event
 	public string OrganizerId { get; set; } = string.Empty;
 
 	public ApplicationUser Organizer { get; set; } = null!;
+
+	public ICollection<Registration> Registrations { get; set; } = new List<Registration>();
 }

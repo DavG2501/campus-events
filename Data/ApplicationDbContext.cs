@@ -1,20 +1,20 @@
 using CampusEvents.Models;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace CampusEvents.Data;
 
-public class ApplicationDbContext : DbContext
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
-	public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
-		: base(options)
+	public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
 	{
 	}
-
-	public DbSet<ApplicationUser> Users => Set<ApplicationUser>();
 
 	public DbSet<Category> Categories => Set<Category>();
 
 	public DbSet<Event> Events => Set<Event>();
+
+	public DbSet<Registration> Registrations => Set<Registration>();
 
 	protected override void OnModelCreating(ModelBuilder modelBuilder)
 	{
@@ -22,34 +22,19 @@ public class ApplicationDbContext : DbContext
 
 		modelBuilder.Entity<ApplicationUser>(entity =>
 		{
-			entity.ToTable("AspNetUsers");
-
-			entity.HasKey(user => user.Id);
-
-			entity.Property(user => user.Id)
-				.HasMaxLength(450)
-				.ValueGeneratedNever();
-
-			entity.Property(user => user.DisplayName)
-				.IsRequired();
+			entity.Property(user => user.DisplayName).IsRequired();
 		});
 
 		modelBuilder.Entity<Category>(entity =>
 		{
-			entity.Property(category => category.Name)
-				.IsRequired();
+			entity.Property(category => category.Name).IsRequired();
 		});
 
 		modelBuilder.Entity<Event>(entity =>
 		{
-			entity.Property(eventItem => eventItem.Title)
-				.IsRequired();
-
-			entity.Property(eventItem => eventItem.Description)
-				.IsRequired();
-
-			entity.Property(eventItem => eventItem.Location)
-				.IsRequired();
+			entity.Property(eventItem => eventItem.Title).IsRequired();
+			entity.Property(eventItem => eventItem.Description).IsRequired();
+			entity.Property(eventItem => eventItem.Location).IsRequired();
 
 			entity.HasOne(eventItem => eventItem.Category)
 				.WithMany(category => category.Events)
@@ -71,6 +56,24 @@ public class ApplicationDbContext : DbContext
 					"CK_Events_CapacityPositive",
 					"[Capacity] > 0");
 			});
+		});
+
+		modelBuilder.Entity<Registration>(entity =>
+		{
+			entity.HasOne(registration => registration.User)
+				.WithMany(user => user.Registrations)
+				.HasForeignKey(registration => registration.UserId)
+				.OnDelete(DeleteBehavior.Restrict);
+
+			entity.HasOne(registration => registration.Event)
+				.WithMany(eventItem => eventItem.Registrations)
+				.HasForeignKey(registration => registration.EventId)
+				.OnDelete(DeleteBehavior.Restrict);
+
+			entity.HasIndex(registration => registration.EventId);
+
+			entity.HasIndex(registration => new { registration.UserId, registration.EventId })
+				.IsUnique();
 		});
 	}
 }

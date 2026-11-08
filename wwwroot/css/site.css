@@ -1,31 +1,485 @@
-html {
-  font-size: 14px;
+:root {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  line-height: 1.5;
+  color: #1f2328;
+  background: #ffffff;
 }
 
-@media (min-width: 768px) {
-  html {
-    font-size: 16px;
-  }
-}
-
-.btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
-}
-
-html {
-  position: relative;
-  min-height: 100%;
+* {
+  box-sizing: border-box;
 }
 
 body {
-  margin-bottom: 60px;
+  min-height: 100vh;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-  color: var(--bs-secondary-color);
-  text-align: end;
+a {
+  color: #174ea6;
 }
 
-.form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
-  text-align: start;
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid #7aa7e8;
+  outline-offset: 2px;
+}
+
+/* ---------- Layout shell ---------- */
+
+.site-shell {
+  width: min(72rem, calc(100% - 2rem));
+  margin-inline: auto;
+}
+
+.site-header {
+  border-bottom: 1px solid #d0d7de;
+  background: #f6f8fa;
+}
+
+.site-header-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  padding-block: 0.85rem;
+}
+
+.site-brand {
+  color: #1f2328;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.site-nav {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.site-nav-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-nav-link {
+  display: inline-block;
+  padding: 0.35rem 0;
+}
+
+.auth-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.role-label {
+  padding: 0.15rem 0.45rem;
+  border: 1px solid #8c959f;
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.logout-form {
+  margin: 0;
+}
+
+.link-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #174ea6;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.page-content {
+  flex: 1;
+  padding-block: 1.5rem 2.5rem;
+}
+
+.site-footer {
+  border-top: 1px solid #d0d7de;
+  padding-block: 1rem;
+  background: #f6f8fa;
+}
+
+/* ---------- Forms ---------- */
+
+.account-form,
+.event-form {
+  width: min(100%, 42rem);
+  display: grid;
+  gap: 1rem;
+}
+
+.form-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.field-label {
+  font-weight: 600;
+}
+
+.field-control {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid #8c959f;
+  border-radius: 0.25rem;
+  background: #ffffff;
+  color: inherit;
+  font: inherit;
+}
+
+.event-description {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.button-primary,
+.button-secondary,
+.button-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #1f2328;
+  border-radius: 0.25rem;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button-primary {
+  background: #1f2328;
+  color: #ffffff;
+}
+
+.button-secondary {
+  background: #ffffff;
+  color: #1f2328;
+}
+
+.button-danger {
+  background: #ffffff;
+  color: #b00020;
+  border-color: #b00020;
+}
+
+.validation-summary,
+.validation-message {
+  color: #9a0007;
+}
+
+.validation-summary:empty,
+.validation-message:empty {
+  display: none;
+}
+
+/* ---------- Event filter / catalog ---------- */
+
+.event-filter-form {
+  display: grid;
+  grid-template-columns: minmax(15rem, 2fr) minmax(12rem, 1fr) minmax(14rem, auto);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  align-items: start;
+}
+
+.event-filter-field {
+  min-width: 0;
+}
+
+.event-filter-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.event-filter-control {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+  border: 1px solid #767676;
+  border-radius: 0.25rem;
+  background-color: #fff;
+  color: #111;
+}
+
+.event-filter-help {
+  margin-top: 0.35rem;
+  font-size: 0.875rem;
+}
+
+.event-filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding-top: calc(1.5em + 0.35rem);
+}
+
+.event-filter-submit,
+.event-filter-clear {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 2.5rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 0.25rem;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.event-filter-submit {
+  background-color: #222;
+  color: #fff;
+}
+
+.event-filter-clear {
+  background-color: #fff;
+  color: #222;
+}
+
+.event-result-count {
+  margin: 0 0 1rem;
+}
+
+.event-card {
+  margin-bottom: 1.5rem;
+}
+
+.event-card-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.25rem;
+}
+
+.cems-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Pagination ---------- */
+
+.event-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.event-page-status {
+  margin: 1rem 0 0;
+  font-weight: 600;
+}
+
+.event-pagination-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.event-page-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid #222;
+  border-radius: 0.25rem;
+  color: #222;
+  background-color: #fff;
+  text-decoration: none;
+}
+
+.event-page-link:hover {
+  background-color: #eee;
+}
+
+.event-page-link:focus-visible {
+  outline: 3px solid #125a9c;
+  outline-offset: 2px;
+}
+
+/* ---------- Event management ---------- */
+
+.page-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-heading h1 {
+  margin-bottom: 0.25rem;
+}
+
+.page-heading p {
+  margin: 0;
+}
+
+.event-management-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.event-management-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid #d0d7de;
+  border-radius: 0.35rem;
+}
+
+.event-management-item h2 {
+  margin-top: 0;
+}
+
+.event-meta {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.event-meta>div {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 0.5rem;
+}
+
+.event-meta dt {
+  font-weight: 700;
+}
+
+.event-meta dd {
+  margin: 0;
+}
+
+/* ---------- Status feedback ---------- */
+
+.status-message,
+.error-message {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.35rem;
+}
+
+.status-message {
+  color: #1a7f37;
+}
+
+.error-message {
+  color: #b00020;
+}
+
+/* ---------- Lifecycle actions ---------- */
+
+.event-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.event-action-form {
+  margin: 0;
+}
+
+.button-danger:focus-visible,
+.button-primary:focus-visible,
+.button-secondary:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 2px;
+}
+
+.confirmation-panel {
+  max-width: 42rem;
+  padding: 1rem;
+  border: 1px solid currentColor;
+  border-radius: 0.35rem;
+}
+
+/* ---------- Registrations (Lesson 7) ---------- */
+
+.registration-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.registration-item {
+  padding: 1rem;
+  border: 1px solid #d0d7de;
+  border-radius: 0.35rem;
+}
+
+.registration-item h2 {
+  margin-top: 0;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 48rem) {
+
+  .site-header-inner,
+  .site-nav {
+    align-items: flex-start;
+  }
+
+  .site-nav {
+    flex-direction: column;
+  }
+
+  .event-filter-form {
+    grid-template-columns: 1fr;
+  }
+
+  .event-filter-actions {
+    flex-direction: column;
+    padding-top: 0;
+  }
+
+  .event-filter-submit,
+  .event-filter-clear {
+    width: 100%;
+  }
 }
