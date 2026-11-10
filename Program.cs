@@ -35,7 +35,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.LoginPath = "/Account/Login";
 });
 
-builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
 
 builder.Services.AddScoped<RegistrationService>();
 
