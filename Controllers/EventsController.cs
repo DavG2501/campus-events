@@ -38,7 +38,6 @@ namespace CampusEvents.Controllers
 			_timeProvider = timeProvider;
 		}
 
-		// GET: Events
 		public async Task<IActionResult> Index(string? search, int? categoryId, int? page, int? pageSize)
 		{
 			_logger.LogInformation("Loading Published upcoming CEMS events with public filters.");
@@ -125,7 +124,6 @@ namespace CampusEvents.Controllers
 			return View(viewModel);
 		}
 
-		// GET: Events/Details/{id}
 		[HttpGet]
 		public async Task<IActionResult> Details(int id)
 		{
@@ -163,7 +161,6 @@ namespace CampusEvents.Controllers
 			return View(model);
 		}
 
-		// GET: Events/Registrations/{id} (Lesson 8)
 		[HttpGet]
 		[Authorize(Roles = RoleNames.Organizer)]
 		public async Task<IActionResult> Registrations(int id)
@@ -206,7 +203,6 @@ namespace CampusEvents.Controllers
 			});
 		}
 
-		// GET: Events/Manage
 		[HttpGet]
 		[Authorize(Roles = RoleNames.Organizer)]
 		public async Task<IActionResult> Manage()
@@ -225,7 +221,6 @@ namespace CampusEvents.Controllers
 			return View(events);
 		}
 
-		// GET: Events/Create
 		[HttpGet]
 		[Authorize(Roles = RoleNames.Organizer)]
 		public async Task<IActionResult> Create()
@@ -235,7 +230,6 @@ namespace CampusEvents.Controllers
 			return View(model);
 		}
 
-		// POST: Events/Create
 		[HttpPost]
 		[Authorize(Roles = RoleNames.Organizer)]
 		[ValidateAntiForgeryToken]
@@ -271,7 +265,6 @@ namespace CampusEvents.Controllers
 			return RedirectToAction(nameof(Manage));
 		}
 
-		// GET: Events/Edit/{id}
 		[HttpGet]
 		[Authorize(Roles = RoleNames.Organizer)]
 		public async Task<IActionResult> Edit(int id)
@@ -311,7 +304,6 @@ namespace CampusEvents.Controllers
 			return View(model);
 		}
 
-		// POST: Events/Edit/{id}
 		[HttpPost]
 		[Authorize(Roles = RoleNames.Organizer)]
 		[ValidateAntiForgeryToken]
@@ -378,7 +370,6 @@ namespace CampusEvents.Controllers
 			return RedirectToAction(nameof(Manage));
 		}
 
-		// POST: Events/Publish/{id}
 		[HttpPost]
 		[Authorize(Roles = RoleNames.Organizer)]
 		[ValidateAntiForgeryToken]
@@ -417,7 +408,6 @@ namespace CampusEvents.Controllers
 			return RedirectToAction(nameof(Manage));
 		}
 
-		// POST: Events/Cancel/{id}
 		[HttpPost]
 		[Authorize(Roles = RoleNames.Organizer)]
 		[ValidateAntiForgeryToken]
@@ -456,7 +446,6 @@ namespace CampusEvents.Controllers
 			return RedirectToAction(nameof(Manage));
 		}
 
-		// GET: Events/Delete/{id}
 		[HttpGet]
 		[Authorize(Roles = RoleNames.Organizer)]
 		public async Task<IActionResult> Delete(int id)
@@ -477,7 +466,6 @@ namespace CampusEvents.Controllers
 			return View(eventItem);
 		}
 
-		// POST: Events/DeleteConfirmed/{id}
 		[HttpPost]
 		[Authorize(Roles = RoleNames.Organizer)]
 		[ValidateAntiForgeryToken]
