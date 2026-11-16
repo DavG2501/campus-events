@@ -46,6 +46,24 @@
                                 My Registrations
                             </a>
                         </li>
+                        
+                        @if (User.IsInRole(RoleNames.Administrator))
+                        {
+                            <li>
+                                <a class="site-nav-link" asp-controller="Admin" asp-action="Index">
+                                    Administration
+                                </a>
+                            </li>
+                        }
+
+                        @if (User.IsInRole(RoleNames.Administrator))
+                        {
+                            <li>
+                                <a class="site-nav-link" asp-controller="Admin" asp-action="Index">
+                                    Administration
+                                </a>
+                            </li>
+                        }
                     }
                     else
                     {

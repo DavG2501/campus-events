@@ -1,0 +1,27 @@
+@model CampusEvents.ViewModels.CategoryInputModel
+
+@{
+	ViewData["Title"] = "Create Category";
+}
+
+<h1>Create Category</h1>
+
+<form asp-controller="AdminCategories" asp-action="Create" method="post" asp-antiforgery="true">
+	<div asp-validation-summary="ModelOnly" class="error-message" role="alert"></div>
+
+	<div class="form-field">
+		<label asp-for="Name"></label>
+		<input asp-for="Name" />
+		<span asp-validation-for="Name" class="field-validation-error"></span>
+	</div>
+
+	<div class="event-actions">
+		<button type="submit" class="button-primary">
+			Create Category
+		</button>
+
+		<a asp-controller="AdminCategories" asp-action="Index" class="button-secondary">
+			Cancel
+		</a>
+	</div>
+</form>

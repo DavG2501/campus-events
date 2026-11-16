@@ -511,4 +511,36 @@ select:focus-visible {
   .event-filter-clear {
     width: 100%;
   }
+
+  .management-list {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .management-card {
+    padding: 1rem;
+    border: 1px solid currentColor;
+    border-radius: 0.35rem;
+  }
+
+  .management-card h2,
+  .management-card h3 {
+    margin-top: 0;
+  }
+
+  .management-list {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .management-card {
+    padding: 1rem;
+    border: 1px solid currentColor;
+    border-radius: 0.35rem;
+  }
+
+  .management-card h2,
+  .management-card h3 {
+    margin-top: 0;
+  }
 }

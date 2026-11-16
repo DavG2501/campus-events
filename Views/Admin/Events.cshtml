@@ -1,0 +1,127 @@
+@model CampusEvents.ViewModels.AdminEventsViewModel
+@using CampusEvents.Models
+@using CampusEvents.Security
+@inject TimeProvider Clock
+
+@{
+	ViewData["Title"] = "Administrator Event Oversight";
+	var now = Clock.GetLocalNow().DateTime;
+}
+
+<h1>Administrator Event Oversight</h1>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+	<p class="status-message" role="status">@statusMessage</p>
+}
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+	<p class="error-message" role="alert">@errorMessage</p>
+}
+
+<form asp-controller="Admin" asp-action="Events" method="get" class="event-filter-form"
+	  aria-label="Administrator Event list page size">
+	<div class="event-filter-field">
+		<label for="adminPageSize" class="event-filter-label">Events per page</label>
+		<select id="adminPageSize" name="pageSize" class="event-filter-control">
+			@foreach (var option in Model.PageSizeOptions)
+			{
+				if (option == Model.PageSize)
+				{
+					<option value="@option" selected>@option</option>
+				}
+				else
+				{
+					<option value="@option">@option</option>
+				}
+			}
+		</select>
+	</div>
+	<div class="event-filter-actions">
+		<button type="submit" class="event-filter-submit">Apply page size</button>
+	</div>
+</form>
+
+@if (Model.Events.Count == 0)
+{
+	<p role="status">No Events have been created.</p>
+}
+else
+{
+	var firstResult = (Model.CurrentPage - 1) * Model.PageSize + 1;
+	var lastResult = firstResult + Model.Events.Count - 1;
+	<p class="event-result-count">Showing @firstResult–@lastResult of @Model.TotalCount Events.</p>
+	<div class="management-list">
+		@foreach (var eventItem in Model.Events)
+		{
+			<article class="management-card">
+				<h2>@eventItem.Title</h2>
+				<dl class="event-meta">
+					<div>
+						<dt>Organizer</dt>
+						<dd>@eventItem.Organizer.DisplayName</dd>
+					</div>
+					<div>
+						<dt>Category</dt>
+						<dd>@eventItem.Category.Name</dd>
+					</div>
+					<div>
+						<dt>Status</dt>
+						<dd>@eventItem.Status</dd>
+					</div>
+					<div>
+						<dt>Location</dt>
+						<dd>@eventItem.Location</dd>
+					</div>
+					<div>
+						<dt>Starts</dt>
+						<dd>
+							<time
+							datetime="@eventItem.StartDateTime.ToString("yyyy-MM-ddTHH:mm:ss")">@eventItem.StartDateTime.ToString("f")</time>
+						</dd>
+					</div>
+				</dl>
+
+				@if (User.IsInRole(RoleNames.Organizer))
+				{
+					<a asp-controller="Events" asp-action="Registrations" asp-route-id="@eventItem.Id" class="button-secondary">View
+						Registrations</a>
+					}
+
+					@if (eventItem.Status == EventStatus.Published && eventItem.StartDateTime > now)
+					{
+						<form asp-controller="Admin" asp-action="CancelEvent" asp-route-id="@eventItem.Id"
+							  asp-route-page="@Model.CurrentPage" asp-route-pageSize="@Model.PageSize" method="post"
+							  asp-antiforgery="true" class="event-action-form">
+							<button type="submit" class="button-danger">Cancel Event</button>
+						</form>
+					}
+				</article>
+			}
+		</div>
+
+		<p class="event-page-status">Page @Model.CurrentPage of @Model.TotalPages</p>
+		@if (Model.TotalPages > 1)
+		{
+			<nav class="event-pagination" aria-label="Administrator Event pages">
+				<div class="event-pagination-actions">
+					@if (Model.CurrentPage > 1)
+					{
+						<a asp-controller="Admin" asp-action="Events" asp-route-page="1" asp-route-pageSize="@Model.PageSize"
+						   class="event-page-link">First</a>
+						<a asp-controller="Admin" asp-action="Events" asp-route-page="@(Model.CurrentPage - 1)"
+						   asp-route-pageSize="@Model.PageSize" rel="prev" class="event-page-link">Previous</a>
+					}
+					@if (Model.CurrentPage < Model.TotalPages)
+					{
+						<a asp-controller="Admin" asp-action="Events" asp-route-page="@(Model.CurrentPage + 1)"
+						   asp-route-pageSize="@Model.PageSize" rel="next" class="event-page-link">Next</a>
+						<a asp-controller="Admin" asp-action="Events" asp-route-page="@Model.TotalPages"
+						   asp-route-pageSize="@Model.PageSize" class="event-page-link">Last</a>
+					}
+				</div>
+			</nav>
+		}
+	}
+
+	<p><a asp-controller="Admin" asp-action="Index">Back to Administration</a></p>

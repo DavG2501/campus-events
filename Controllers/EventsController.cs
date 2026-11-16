@@ -12,6 +12,7 @@ using CampusEvents.Models;
 using Microsoft.AspNetCore.Authorization;
 using CampusEvents.Security;
 using CampusEvents.ViewModels;
+using CampusEvents.Services;
 
 namespace CampusEvents.Controllers
 {
@@ -38,72 +39,69 @@ namespace CampusEvents.Controllers
 		}
 
 		// GET: Events
-		public async Task<IActionResult> Index(
-			string? search,
-			int? categoryId,
-			int? page,
-			int? pageSize)
+		public async Task<IActionResult> Index(string? search, int? categoryId, int? page, int? pageSize)
 		{
-			_logger.LogInformation(
-				"Loading Published upcoming CEMS events with public filters.");
+			_logger.LogInformation("Loading Published upcoming CEMS events with public filters.");
 
+			var pageSizeWasSupplied = Request.Query.ContainsKey(nameof(pageSize));
+			if (pageSizeWasSupplied && (!pageSize.HasValue || !AllowedPageSizes.Contains(pageSize.Value)))
+			{
+				var errorViewModel = new ErrorPageViewModel
+				{
+					Title = "Invalid Page Size",
+					Message = "Choose a page size of 10, 25, or 50.",
+					ReturnUrl = Url.Action("Index", "Events"),
+					ReturnLabel = "Return to Events"
+				};
+				Response.StatusCode = StatusCodes.Status400BadRequest;
+				return View("BadRequest", errorViewModel);
+			}
+
+			var currentPageSize = pageSize.GetValueOrDefault(DefaultPageSize);
 			var now = _timeProvider.GetLocalNow().DateTime;
 
 			var query = _context.Events
 				.AsNoTracking()
 				.Include(eventItem => eventItem.Category)
-				.Where(eventItem =>
-					eventItem.Status == EventStatus.Published &&
-					eventItem.StartDateTime > now);
+				.Where(eventItem => eventItem.Status == EventStatus.Published && eventItem.StartDateTime > now);
 
 			if (!string.IsNullOrWhiteSpace(search))
 			{
 				var searchTerm = search.Trim();
-
-				query = query.Where(eventItem =>
-					eventItem.Title.Contains(searchTerm) ||
-					eventItem.Location.Contains(searchTerm));
+				query = query.Where(eventItem => eventItem.Title.Contains(searchTerm) || eventItem.Location.Contains(searchTerm));
 			}
 
 			if (categoryId.HasValue)
 			{
-				query = query.Where(eventItem =>
-					eventItem.CategoryId == categoryId.Value);
+				query = query.Where(eventItem => eventItem.CategoryId == categoryId.Value);
 			}
 
 			var totalCount = await query.CountAsync();
-
-			var selectedPageSize = pageSize.GetValueOrDefault(DefaultPageSize);
-
-			if (!AllowedPageSizes.Contains(selectedPageSize))
-			{
-				selectedPageSize = DefaultPageSize;
-			}
-
-			var totalPages = (int)Math.Ceiling(totalCount / (double)selectedPageSize);
+			var totalPages = (int)Math.Ceiling(totalCount / (double)currentPageSize);
 
 			var currentPage = page.GetValueOrDefault(1);
+			if (currentPage < 1) currentPage = 1;
+			if (totalPages > 0 && currentPage > totalPages) currentPage = totalPages;
+			if (totalPages == 0) currentPage = 1;
 
-			if (currentPage < 1)
+			var offset = ((long)currentPage - 1) * currentPageSize;
+			if (offset > int.MaxValue)
 			{
-				currentPage = 1;
-			}
-
-			if (totalPages > 0 && currentPage > totalPages)
-			{
-				currentPage = totalPages;
-			}
-
-			if (totalPages == 0)
-			{
-				currentPage = 1;
+				Response.StatusCode = StatusCodes.Status400BadRequest;
+				return View("BadRequest", new ErrorPageViewModel
+				{
+					Title = "Page Range Unavailable",
+					Message = "Choose an earlier page in the event catalog.",
+					ReturnUrl = Url.Action("Index", "Events"),
+					ReturnLabel = "Return to Events"
+				});
 			}
 
 			var events = await query
 				.OrderBy(eventItem => eventItem.StartDateTime)
 				.ThenBy(eventItem => eventItem.Id)
-				.Skip((currentPage - 1) * selectedPageSize)
-				.Take(selectedPageSize)
+				.Skip((int)offset)
+				.Take(currentPageSize)
 				.ToListAsync();
 
 			var categories = await _context.Categories
@@ -118,36 +116,13 @@ namespace CampusEvents.Controllers
 				Search = search,
 				CategoryId = categoryId,
 				CurrentPage = currentPage,
-				PageSize = selectedPageSize,
+				PageSize = currentPageSize,
 				PageSizeOptions = AllowedPageSizes,
 				TotalCount = totalCount,
 				TotalPages = totalPages
 			};
 
 			return View(viewModel);
-		}
-
-		// GET: Events/Manage
-		[HttpGet]
-		[Authorize(Roles = RoleNames.Organizer)]
-		public async Task<IActionResult> Manage()
-		{
-			var organizer = await _userManager.GetUserAsync(User);
-
-			if (organizer is null)
-			{
-				return Challenge();
-			}
-
-			var events = await _context.Events
-				.AsNoTracking()
-				.Include(e => e.Category)
-				.Where(e => e.OrganizerId == organizer.Id)
-				.OrderBy(e => e.StartDateTime)
-				.ThenBy(e => e.Id)
-				.ToListAsync();
-
-			return View(events);
 		}
 
 		// GET: Events/Details/{id}
@@ -161,20 +136,15 @@ namespace CampusEvents.Controllers
 				.FirstOrDefaultAsync(item => item.Id == id &&
 					(item.Status == EventStatus.Published || item.Status == EventStatus.Cancelled));
 
-			if (eventItem is null)
-			{
-				return EventNotFound();
-			}
+			if (eventItem is null) return EventNotFound();
 
 			var currentRegistrationCount = await _context.Registrations.CountAsync(registration =>
 				registration.EventId == eventItem.Id);
 
 			var isCurrentUserRegistered = false;
-
 			if (User.Identity?.IsAuthenticated == true)
 			{
 				var currentUser = await _userManager.GetUserAsync(User);
-
 				if (currentUser is not null)
 				{
 					isCurrentUserRegistered = await _context.Registrations.AnyAsync(registration =>
@@ -193,15 +163,75 @@ namespace CampusEvents.Controllers
 			return View(model);
 		}
 
+		// GET: Events/Registrations/{id} (Lesson 8)
+		[HttpGet]
+		[Authorize(Roles = RoleNames.Organizer)]
+		public async Task<IActionResult> Registrations(int id)
+		{
+			var organizer = await _userManager.GetUserAsync(User);
+			if (organizer is null) return Challenge();
+
+			var hasAdministratorAccess = User.IsInRole(RoleNames.Administrator);
+			var eventInfo = await _context.Events
+				.AsNoTracking()
+				.Where(eventItem => eventItem.Id == id &&
+					(eventItem.OrganizerId == organizer.Id || hasAdministratorAccess))
+				.Select(eventItem => new { eventItem.Id, eventItem.Title, eventItem.Capacity })
+				.SingleOrDefaultAsync();
+
+			if (eventInfo is null) return EventNotFound();
+
+			var participants = await _context.Registrations
+				.AsNoTracking()
+				.Where(registration => registration.EventId == eventInfo.Id)
+				.OrderBy(registration => registration.CreatedAt)
+				.ThenBy(registration => registration.Id)
+				.Select(registration => new OrganizerRegistrationParticipantViewModel
+				{
+					DisplayName = registration.User.DisplayName,
+					Email = registration.User.Email ?? string.Empty,
+					RegisteredAt = registration.CreatedAt
+				})
+				.ToListAsync();
+
+			var count = participants.Count;
+			return View(new OrganizerRegistrationViewModel
+			{
+				EventId = eventInfo.Id,
+				EventTitle = eventInfo.Title,
+				Capacity = eventInfo.Capacity,
+				CurrentRegistrationCount = count,
+				RemainingCapacity = Math.Max(0, eventInfo.Capacity - count),
+				Participants = participants
+			});
+		}
+
+		// GET: Events/Manage
+		[HttpGet]
+		[Authorize(Roles = RoleNames.Organizer)]
+		public async Task<IActionResult> Manage()
+		{
+			var organizer = await _userManager.GetUserAsync(User);
+			if (organizer is null) return Challenge();
+
+			var events = await _context.Events
+				.AsNoTracking()
+				.Include(e => e.Category)
+				.Where(e => e.OrganizerId == organizer.Id)
+				.OrderBy(e => e.StartDateTime)
+				.ThenBy(e => e.Id)
+				.ToListAsync();
+
+			return View(events);
+		}
+
 		// GET: Events/Create
 		[HttpGet]
 		[Authorize(Roles = RoleNames.Organizer)]
 		public async Task<IActionResult> Create()
 		{
 			var model = new EventInputModel();
-
 			await PopulateCategoryOptionsAsync(model);
-
 			return View(model);
 		}
 
@@ -212,7 +242,6 @@ namespace CampusEvents.Controllers
 		public async Task<IActionResult> Create(EventInputModel model)
 		{
 			await ValidateCategoryAsync(model);
-
 			if (!ModelState.IsValid)
 			{
 				await PopulateCategoryOptionsAsync(model);
@@ -220,11 +249,7 @@ namespace CampusEvents.Controllers
 			}
 
 			var organizer = await _userManager.GetUserAsync(User);
-
-			if (organizer is null)
-			{
-				return Challenge();
-			}
+			if (organizer is null) return Challenge();
 
 			var eventItem = new Event
 			{
@@ -236,7 +261,6 @@ namespace CampusEvents.Controllers
 				EndDateTime = model.EndDateTime!.Value,
 				Capacity = model.Capacity!.Value,
 				CreatedAt = _timeProvider.GetLocalNow().DateTime,
-
 				OrganizerId = organizer.Id,
 				Status = EventStatus.Draft
 			};
@@ -253,20 +277,13 @@ namespace CampusEvents.Controllers
 		public async Task<IActionResult> Edit(int id)
 		{
 			var organizer = await _userManager.GetUserAsync(User);
-
-			if (organizer is null)
-			{
-				return Challenge();
-			}
+			if (organizer is null) return Challenge();
 
 			var eventItem = await _context.Events
 				.AsNoTracking()
 				.FirstOrDefaultAsync(item => item.Id == id && item.OrganizerId == organizer.Id);
 
-			if (eventItem is null)
-			{
-				return EventNotFound();
-			}
+			if (eventItem is null) return EventNotFound();
 
 			if (eventItem.Status == EventStatus.Cancelled)
 			{
@@ -291,7 +308,6 @@ namespace CampusEvents.Controllers
 			};
 
 			await PopulateCategoryOptionsAsync(model);
-
 			return View(model);
 		}
 
@@ -302,17 +318,12 @@ namespace CampusEvents.Controllers
 		public async Task<IActionResult> Edit(int id, EventInputModel model)
 		{
 			var organizer = await _userManager.GetUserAsync(User);
-
-			if (organizer is null)
-			{
-				return Challenge();
-			}
+			if (organizer is null) return Challenge();
 
 			await using var transaction = await _context.Database.BeginTransactionAsync();
+			var eventItem = await EventWriteLock.LoadAsync(_context, id);
 
-			var eventItem = await LoadOwnedEventForUpdateAsync(id, organizer.Id);
-
-			if (eventItem is null)
+			if (eventItem is null || eventItem.OrganizerId != organizer.Id)
 			{
 				await transaction.RollbackAsync();
 				return EventNotFound();
@@ -321,7 +332,6 @@ namespace CampusEvents.Controllers
 			if (eventItem.Status == EventStatus.Cancelled)
 			{
 				await transaction.RollbackAsync();
-
 				TempData["ErrorMessage"] = "A Cancelled Event can no longer be edited.";
 				return RedirectToAction(nameof(Manage));
 			}
@@ -341,8 +351,7 @@ namespace CampusEvents.Controllers
 
 				if (proposedCapacity < currentRegistrationCount)
 				{
-					ModelState.AddModelError(
-						nameof(EventInputModel.Capacity),
+					ModelState.AddModelError(nameof(EventInputModel.Capacity),
 						$"Capacity cannot be lower than the current registration count ({currentRegistrationCount}).");
 				}
 			}
@@ -350,7 +359,6 @@ namespace CampusEvents.Controllers
 			if (!ModelState.IsValid)
 			{
 				await transaction.RollbackAsync();
-
 				await PopulateCategoryOptionsAsync(model);
 				return View(model);
 			}
@@ -377,38 +385,34 @@ namespace CampusEvents.Controllers
 		public async Task<IActionResult> Publish(int id)
 		{
 			var organizer = await _userManager.GetUserAsync(User);
+			if (organizer is null) return Challenge();
 
-			if (organizer is null)
+			await using var transaction = await _context.Database.BeginTransactionAsync();
+			var eventItem = await EventWriteLock.LoadAsync(_context, id);
+
+			if (eventItem is null || eventItem.OrganizerId != organizer.Id)
 			{
-				return Challenge();
-			}
-
-			var eventItem = await _context.Events
-				.FirstOrDefaultAsync(item => item.Id == id && item.OrganizerId == organizer.Id);
-
-			if (eventItem is null)
-			{
+				await transaction.RollbackAsync();
 				return EventNotFound();
 			}
 
 			if (eventItem.Status != EventStatus.Draft)
 			{
+				await transaction.RollbackAsync();
 				TempData["ErrorMessage"] = "Only a Draft Event can be published.";
 				return RedirectToAction(nameof(Manage));
 			}
 
-			var now = _timeProvider.GetLocalNow().DateTime;
-
-			if (eventItem.StartDateTime <= now)
+			if (eventItem.StartDateTime <= _timeProvider.GetLocalNow().DateTime)
 			{
+				await transaction.RollbackAsync();
 				TempData["ErrorMessage"] = "A Draft Event can be published only before its start date and time.";
 				return RedirectToAction(nameof(Manage));
 			}
 
 			eventItem.Status = EventStatus.Published;
-
 			await _context.SaveChangesAsync();
-
+			await transaction.CommitAsync();
 			TempData["StatusMessage"] = $"{eventItem.Title} was published.";
 			return RedirectToAction(nameof(Manage));
 		}
@@ -420,38 +424,34 @@ namespace CampusEvents.Controllers
 		public async Task<IActionResult> Cancel(int id)
 		{
 			var organizer = await _userManager.GetUserAsync(User);
+			if (organizer is null) return Challenge();
 
-			if (organizer is null)
+			await using var transaction = await _context.Database.BeginTransactionAsync();
+			var eventItem = await EventWriteLock.LoadAsync(_context, id);
+
+			if (eventItem is null || eventItem.OrganizerId != organizer.Id)
 			{
-				return Challenge();
-			}
-
-			var eventItem = await _context.Events
-				.FirstOrDefaultAsync(item => item.Id == id && item.OrganizerId == organizer.Id);
-
-			if (eventItem is null)
-			{
+				await transaction.RollbackAsync();
 				return EventNotFound();
 			}
 
 			if (eventItem.Status != EventStatus.Published)
 			{
+				await transaction.RollbackAsync();
 				TempData["ErrorMessage"] = "Only a Published Event can be cancelled.";
 				return RedirectToAction(nameof(Manage));
 			}
 
-			var now = _timeProvider.GetLocalNow().DateTime;
-
-			if (eventItem.StartDateTime <= now)
+			if (eventItem.StartDateTime <= _timeProvider.GetLocalNow().DateTime)
 			{
+				await transaction.RollbackAsync();
 				TempData["ErrorMessage"] = "A Published Event can be cancelled only before it starts.";
 				return RedirectToAction(nameof(Manage));
 			}
 
 			eventItem.Status = EventStatus.Cancelled;
-
 			await _context.SaveChangesAsync();
-
+			await transaction.CommitAsync();
 			TempData["StatusMessage"] = $"{eventItem.Title} was cancelled.";
 			return RedirectToAction(nameof(Manage));
 		}
@@ -462,11 +462,7 @@ namespace CampusEvents.Controllers
 		public async Task<IActionResult> Delete(int id)
 		{
 			var organizer = await _userManager.GetUserAsync(User);
-
-			if (organizer is null)
-			{
-				return Challenge();
-			}
+			if (organizer is null) return Challenge();
 
 			var eventItem = await _context.Events
 				.AsNoTracking()
@@ -476,10 +472,7 @@ namespace CampusEvents.Controllers
 					item.OrganizerId == organizer.Id &&
 					item.Status == EventStatus.Draft);
 
-			if (eventItem is null)
-			{
-				return EventNotFound();
-			}
+			if (eventItem is null) return EventNotFound();
 
 			return View(eventItem);
 		}
@@ -491,17 +484,12 @@ namespace CampusEvents.Controllers
 		public async Task<IActionResult> DeleteConfirmed(int id)
 		{
 			var organizer = await _userManager.GetUserAsync(User);
-
-			if (organizer is null)
-			{
-				return Challenge();
-			}
+			if (organizer is null) return Challenge();
 
 			await using var transaction = await _context.Database.BeginTransactionAsync();
+			var eventItem = await EventWriteLock.LoadAsync(_context, id);
 
-			var eventItem = await LoadOwnedEventForUpdateAsync(id, organizer.Id);
-
-			if (eventItem is null)
+			if (eventItem is null || eventItem.OrganizerId != organizer.Id)
 			{
 				await transaction.RollbackAsync();
 				return EventNotFound();
@@ -510,34 +498,25 @@ namespace CampusEvents.Controllers
 			if (eventItem.Status != EventStatus.Draft)
 			{
 				await transaction.RollbackAsync();
-
 				TempData["ErrorMessage"] = "Only a Draft Event can be permanently deleted.";
 				return RedirectToAction(nameof(Manage));
 			}
 
-			var hasCurrentRegistrations = await _context.Registrations
-				.AnyAsync(registration => registration.EventId == eventItem.Id);
-
+			var hasCurrentRegistrations = await _context.Registrations.AnyAsync(registration => registration.EventId == eventItem.Id);
 			if (hasCurrentRegistrations)
 			{
 				await transaction.RollbackAsync();
-
 				TempData["ErrorMessage"] = "This Draft Event cannot be deleted while current Registrations exist.";
 				return RedirectToAction(nameof(Manage));
 			}
 
 			_context.Events.Remove(eventItem);
-
 			await _context.SaveChangesAsync();
 			await transaction.CommitAsync();
 
 			TempData["StatusMessage"] = $"{eventItem.Title} was permanently deleted.";
 			return RedirectToAction(nameof(Manage));
 		}
-
-		// -----------------------------------------------------------------
-		// Helpers
-		// -----------------------------------------------------------------
 
 		private async Task PopulateCategoryOptionsAsync(EventInputModel model)
 		{
@@ -553,29 +532,15 @@ namespace CampusEvents.Controllers
 
 		private async Task ValidateCategoryAsync(EventInputModel model)
 		{
-			if (!model.CategoryId.HasValue || model.CategoryId.Value <= 0)
-			{
-				return;
-			}
+			if (!model.CategoryId.HasValue || model.CategoryId.Value <= 0) return;
 
 			var categoryExists = await _context.Categories
 				.AnyAsync(category => category.Id == model.CategoryId.Value);
 
 			if (!categoryExists)
 			{
-				ModelState.AddModelError(
-					nameof(model.CategoryId),
-					"Select an existing Category.");
+				ModelState.AddModelError(nameof(model.CategoryId), "Select an existing Category.");
 			}
-		}
-
-		private Task<Event?> LoadOwnedEventForUpdateAsync(int id, string organizerId)
-		{
-			return _context.Events.FromSqlInterpolated($@"
-                SELECT *
-                FROM [Events] WITH (UPDLOCK, HOLDLOCK)
-                WHERE [Id] = {id}
-                  AND [OrganizerId] = {organizerId}").SingleOrDefaultAsync();
 		}
 
 		private IActionResult EventNotFound()

@@ -1,0 +1,65 @@
+@model IReadOnlyList<CampusEvents.ViewModels.AdminUserViewModel>
+
+@{
+	ViewData["Title"] = "Organizer Access";
+}
+
+<h1>Organizer Access</h1>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+	<p class="status-message" role="status">
+		<strong>Success:</strong> @statusMessage
+	</p>
+}
+
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+	<p class="error-message" role="alert">
+		@errorMessage
+	</p>
+}
+
+<div class="management-list">
+	@foreach (var user in Model)
+	{
+		<article class="management-card">
+			<h2>@user.DisplayName</h2>
+
+			<p>
+				<strong>Email:</strong>
+				@user.Email
+			</p>
+
+			<p>
+				<strong>Organizer access:</strong>
+				@(user.IsOrganizer ? "Yes" : "No")
+			</p>
+
+			@if (user.IsOrganizer)
+			{
+				<form asp-controller="AdminUsers" asp-action="RemoveOrganizer" asp-route-id="@user.Id" method="post"
+					  asp-antiforgery="true">
+					<button type="submit" class="button-danger">
+						Remove Organizer Access
+					</button>
+				</form>
+			}
+			else
+			{
+				<form asp-controller="AdminUsers" asp-action="GrantOrganizer" asp-route-id="@user.Id" method="post"
+					  asp-antiforgery="true">
+					<button type="submit" class="button-primary">
+						Grant Organizer Access
+					</button>
+				</form>
+			}
+		</article>
+	}
+</div>
+
+<p>
+	<a asp-controller="Admin" asp-action="Index">
+		Back to Administration
+	</a>
+</p>

@@ -63,6 +63,10 @@ else
 					</dl>
 				</div>
 				<div class="event-actions">
+					<a asp-controller="Events" asp-action="Registrations" asp-route-id="@eventItem.Id"
+					   class="button-secondary">View Registrations</a>
+					<a asp-controller="Events" asp-action="Registrations" asp-route-id="@eventItem.Id"
+					   class="button-secondary">View Registrations</a>
 					@if (eventItem.Status == EventStatus.Draft)
 					{
 						<a asp-controller="Events" asp-action="Edit" asp-route-id="@eventItem.Id" class="button-secondary">Edit</a>

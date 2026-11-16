@@ -1,0 +1,33 @@
+@{
+	ViewData["Title"] = "Administration";
+}
+
+<h1>Administration</h1>
+
+<p>
+	These product-management operations require Administrator access on the server.
+</p>
+
+<div class="management-list">
+	<article class="management-card">
+		<h2>Event Oversight</h2>
+		<p>
+			Review all Events and cancel eligible Published Events.
+		</p>
+		<a asp-controller="Admin" asp-action="Events" class="button-primary">
+			Manage Events
+		</a>
+	</article>
+	
+	<article class="management-card">
+		<h2>Organizer Access</h2>
+		<p>Grant or remove Organizer access for existing users.</p>
+		<a asp-controller="AdminUsers" asp-action="Index" class="button-primary">Manage Organizer Access</a>
+	</article>
+
+	<article class="management-card">
+		<h2>Categories</h2>
+		<p>Create, rename, and delete unused Event Categories.</p>
+		<a asp-controller="AdminCategories" asp-action="Index" class="button-primary">Manage Categories</a>
+	</article>
+</div>

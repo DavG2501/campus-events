@@ -1,0 +1,55 @@
+@model IReadOnlyList<CampusEvents.Models.Category>
+
+@{
+	ViewData["Title"] = "Category Management";
+}
+
+<h1>Category Management</h1>
+
+@if (TempData["StatusMessage"] is string statusMessage)
+{
+	<p class="status-message" role="status">
+		<strong>Success:</strong> @statusMessage
+	</p>
+}
+
+@if (TempData["ErrorMessage"] is string errorMessage)
+{
+	<p class="error-message" role="alert">
+		@errorMessage
+	</p>
+}
+
+<p>
+	<a asp-controller="AdminCategories" asp-action="Create" class="button-primary">
+		Create Category
+	</a>
+</p>
+
+@if (Model.Count == 0)
+{
+	<p>No Categories have been created.</p>
+}
+else
+{
+	<div class="management-list">
+		@foreach (var category in Model)
+		{
+			<article class="management-card">
+				<h2>@category.Name</h2>
+				<div class="event-actions">
+					<a asp-controller="AdminCategories" asp-action="Edit" asp-route-id="@category.Id"
+					   class="button-secondary">Edit</a>
+					<a asp-controller="AdminCategories" asp-action="Delete" asp-route-id="@category.Id"
+					   class="button-danger">Delete</a>
+				</div>
+			</article>
+		}
+	</div>
+}
+
+<p>
+	<a asp-controller="Admin" asp-action="Index">
+		Back to Administration
+	</a>
+</p>

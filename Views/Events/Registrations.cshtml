@@ -1,0 +1,70 @@
+@model CampusEvents.ViewModels.OrganizerRegistrationViewModel
+@using CampusEvents.Security
+
+@{
+	ViewData["Title"] = "Event Registrations";
+}
+
+<h1>Event Registrations</h1>
+
+<h2>@Model.EventTitle</h2>
+
+<dl class="event-meta">
+	<div>
+		<dt>Capacity</dt>
+		<dd>@Model.Capacity</dd>
+	</div>
+	<div>
+		<dt>Current registrations</dt>
+		<dd>@Model.CurrentRegistrationCount</dd>
+	</div>
+	<div>
+		<dt>Remaining capacity</dt>
+		<dd>@Model.RemainingCapacity</dd>
+	</div>
+</dl>
+
+@if (Model.Participants.Count == 0)
+{
+	<p role="status">
+		No participants are currently registered for this Event.
+	</p>
+}
+else
+{
+	<section aria-labelledby="participant-list-heading">
+		<h2 id="participant-list-heading">Current Participants</h2>
+
+		<div class="management-list">
+			@foreach (var participant in Model.Participants)
+			{
+				<article class="management-card">
+					<h3>@participant.DisplayName</h3>
+
+					<p>
+						<strong>Email:</strong>
+						@participant.Email
+					</p>
+
+					<p>
+						<strong>Registered:</strong>
+						<time datetime="@participant.RegisteredAt.ToString("yyyy-MM-ddTHH:mm:ss")">
+							@participant.RegisteredAt.ToString("f")
+						</time>
+					</p>
+				</article>
+			}
+		</div>
+	</section>
+}
+
+<p>
+	<a asp-controller="Events" asp-action="Manage">
+		Back to My Events
+	</a>
+</p>
+
+@if (User.IsInRole(RoleNames.Organizer) && User.IsInRole(RoleNames.Administrator))
+{
+	<p><a asp-controller="Admin" asp-action="Events">Back to Administrator Event Oversight</a></p>
+}

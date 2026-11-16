@@ -6,6 +6,9 @@ namespace CampusEvents.Data;
 
 public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 {
+
+	public const string CategoryNameCollation = "SQL_Latin1_General_CP1_CI_AS";
+
 	public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
 	{
 	}
@@ -25,9 +28,15 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>
 			entity.Property(user => user.DisplayName).IsRequired();
 		});
 
+
 		modelBuilder.Entity<Category>(entity =>
 		{
-			entity.Property(category => category.Name).IsRequired();
+			entity.Property(category => category.Name)
+				.IsRequired()
+				.HasMaxLength(100)
+				.UseCollation(CategoryNameCollation);
+
+			entity.HasIndex(category => category.Name).IsUnique();
 		});
 
 		modelBuilder.Entity<Event>(entity =>
